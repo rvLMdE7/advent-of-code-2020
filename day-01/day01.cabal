@@ -13,3 +13,4 @@ executable day01
     , text
     , flow
   default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
