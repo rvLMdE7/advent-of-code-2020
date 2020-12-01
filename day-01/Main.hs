@@ -13,13 +13,13 @@ main = do
     print $ part2 input
 
 part1 :: [Int] -> Int
-part1 = findNValsThatSumsTo 2 2020 .> product
+part1 = findNValsThatSumTo 2 2020 .> product
 
 part2 :: [Int] -> Int
-part2 = findNValsThatSumsTo 3 2020 .> product
+part2 = findNValsThatSumTo 3 2020 .> product
 
-findNValsThatSumsTo :: (Eq a, Num a) => Int -> a -> [a] -> [a]
-findNValsThatSumsTo n target list = head $ do
+findNValsThatSumTo :: (Eq a, Num a) => Int -> a -> [a] -> [a]
+findNValsThatSumTo n target list = head $ do
     subset <- replicateM n list
     guard $ sum subset == target
     pure subset
