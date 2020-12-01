@@ -1,4 +1,4 @@
-import Control.Monad (guard)
+import Control.Monad (replicateM, guard)
 import Data.ByteString qualified as B
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -10,16 +10,19 @@ main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: [Int] -> Int
-part1 = findPairSumsTo 2020 .> uncurry (*)
+part1 = findNValsThatSumsTo 2 2020 .> product
 
-findPairSumsTo :: (Eq a, Num a) => a -> [a] -> (a, a)
-findPairSumsTo target list = head $ do
-    x <- list
-    y <- list
-    guard $ x + y == target
-    pure (x, y)
+part2 :: [Int] -> Int
+part2 = findNValsThatSumsTo 3 2020 .> product
+
+findNValsThatSumsTo :: (Eq a, Num a) => Int -> a -> [a] -> [a]
+findNValsThatSumsTo n target list = head $ do
+    subset <- replicateM n list
+    guard $ sum subset == target
+    pure subset
 
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
