@@ -2,13 +2,13 @@
 
 Doing the Advent of Code 2020 challenges in Haskell.
 
-I have each day set up as a separate 'project', and I have things set up so
-they should work with either `stack` or `cabal`. So, in order to play around
-with any particular day, you can do the following:
+I have each day set up under one umbrella 'project', which should work with
+either `stack` or `cabal`. So, in order to play around with any particular day,
+you can do the following:
 
-- change dir: `$ cd day-xx`
-- open repl: `$ cabal repl` or `$ stack repl`
-- run task: `$ cabal run` or `$ stack run`
+- to open a repl, either `$ cabal repl` or `$ stack repl`, and then you can
+  load up a given day with `:load DayXX` or `import DayXX`
+- to run a given day, do either `$ cabal run dayXX` or `$ stack run dayXX`
 
 (We have the stack resolver set as a nightly snapshot, rather than a LTS
 snapshot, because at time of writing there wasn't yet an LTS release supporting
