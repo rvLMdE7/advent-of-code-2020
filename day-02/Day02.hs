@@ -13,8 +13,8 @@ import Data.Maybe (fromJust)
 type Parser = P.Parsec Void T.Text
 
 data Policy = MkPolicy
-    { minTimes :: Int
-    , maxTimes :: Int
+    { one :: Int
+    , two :: Int
     , letter :: Char
     } deriving (Bounded, Eq, Ord, Show, Read)
 
@@ -22,16 +22,30 @@ main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-02/input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: [(Policy, T.Text)] -> Int
-part1 = filter (uncurry isValidPwd) .> length
+part1 = filter (uncurry isValidPwdUnofficial) .> length
 
-isValidPwd :: Policy -> T.Text -> Bool
-isValidPwd policy pwd =
-    (minTimes policy <= numTimes) && (numTimes <= maxTimes policy)
+isValidPwdUnofficial :: Policy -> T.Text -> Bool
+isValidPwdUnofficial policy pwd =
+    (one policy <= numTimes) && (numTimes <= two policy)
   where
     numTimes = T.count neededStr pwd
     neededStr = T.singleton $ letter policy
+
+part2 :: [(Policy, T.Text)] -> Int
+part2 = filter (uncurry isValidPwdOfficial) .> length
+
+isValidPwdOfficial :: Policy -> T.Text -> Bool
+isValidPwdOfficial policy pwd =
+   (charOne == letter policy) `xor` (charTwo == letter policy)
+  where
+    charOne = T.index pwd (one policy - 1)
+    charTwo = T.index pwd (two policy - 1)
+
+xor :: Bool -> Bool -> Bool
+xor p q = (p || q) && not (p && q)
 
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
@@ -43,10 +57,10 @@ parseInput = T.lines .> fmap parse
 
 parsePolicyAndPwd :: Parser (Policy, T.Text)
 parsePolicyAndPwd = do
-    minN <- read <$> (PC.space *> P.some PC.digitChar)
+    x <- read <$> (PC.space *> P.some PC.digitChar)
     PC.space *> PC.char '-'
-    maxN <- read <$> (PC.space *> P.some PC.digitChar)
+    y <- read <$> (PC.space *> P.some PC.digitChar)
     char <- PC.space *> P.anySingle
     PC.space *> PC.char ':'
     pwd <- PC.space *> P.many PC.alphaNumChar
-    pure (MkPolicy minN maxN char, T.pack pwd)
+    pure (MkPolicy x y char, T.pack pwd)
