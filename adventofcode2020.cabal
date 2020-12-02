@@ -32,10 +32,19 @@ common common-exe-options
 
 library
   import: common-lib-options
-  hs-source-dirs: day-01
-  exposed-modules: Day01
+  hs-source-dirs:
+      day-01
+    , day-02
+  exposed-modules:
+      Day01
+    , Day02
 
 executable day01
   import: common-exe-options
   mixins: adventofcode2020 (Day01 as Day)
+  main-is: Main.hs
+
+executable day02
+  import: common-exe-options
+  mixins: adventofcode2020 (Day02 as Day)
   main-is: Main.hs
