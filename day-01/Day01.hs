@@ -1,3 +1,5 @@
+module Day01 where
+
 import Control.Monad (replicateM, guard)
 import Data.ByteString qualified as B
 import Data.Text qualified as T
@@ -8,7 +10,7 @@ import Flow ((.>))
 
 main :: IO ()
 main = do
-    input <- parseInput <$> readFileUtf8 "input.txt"
+    input <- parseInput <$> readFileUtf8 "day-01/input.txt"
     print $ part1 input
     print $ part2 input
 
