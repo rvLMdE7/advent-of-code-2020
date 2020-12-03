@@ -36,9 +36,11 @@ library
   hs-source-dirs:
       day-01
     , day-02
+    , day-03
   exposed-modules:
       Day01
     , Day02
+    , Day03
 
 executable day01
   import: common-exe-options
@@ -48,4 +50,9 @@ executable day01
 executable day02
   import: common-exe-options
   mixins: adventofcode2020 (Day02 as Day)
+  main-is: Main.hs
+
+executable day03
+  import: common-exe-options
+  mixins: adventofcode2020 (Day03 as Day)
   main-is: Main.hs
