@@ -22,7 +22,9 @@ common common-lib-options
     , bytestring
     , flow
     , text
+    , vector
     , megaparsec
+    , th-printf
 
 common common-exe-options
   import: common-lang-options
