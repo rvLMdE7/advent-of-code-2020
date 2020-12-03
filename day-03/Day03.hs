@@ -20,10 +20,14 @@ main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-03/input.txt"
     print $ part1 (3, 1) input
+    print $ part2 [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)] input
 
 part1 :: (Int, Int) -> Grid Tile -> Int
 part1 slope grid =
     length $ filter (== Tree) $ trailAtSlopeTopToBotHorizLoop slope grid
+
+part2 :: [(Int, Int)] -> Grid Tile -> Int
+part2 slopes grid = product [part1 slope grid | slope <- slopes]
 
 trailAtSlopeTopToBotHorizLoop :: (Int, Int) -> Grid a -> [a]
 trailAtSlopeTopToBotHorizLoop slope grid = go (0, 0) []
