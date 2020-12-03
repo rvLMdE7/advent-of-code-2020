@@ -1,5 +1,6 @@
 module Day02 where
 
+import Control.Monad (void)
 import Data.ByteString qualified as B
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -58,9 +59,9 @@ parseInput = T.lines .> fmap parse
 parsePolicyAndPwd :: Parser (Policy, T.Text)
 parsePolicyAndPwd = do
     x <- read <$> (PC.space *> P.some PC.digitChar)
-    PC.space *> PC.char '-'
+    PC.space *> void (PC.char '-')
     y <- read <$> (PC.space *> P.some PC.digitChar)
     char <- PC.space *> P.anySingle
-    PC.space *> PC.char ':'
+    PC.space *> void (PC.char ':')
     pwd <- PC.space *> P.many PC.alphaNumChar
     pure (MkPolicy x y char, T.pack pwd)

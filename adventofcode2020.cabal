@@ -25,6 +25,7 @@ common common-lib-options
     , vector
     , megaparsec
     , th-printf
+  ghc-options: -Wall
 
 common common-exe-options
   import: common-lang-options
