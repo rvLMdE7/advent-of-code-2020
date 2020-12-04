@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Day04 where
 
-import Control.Applicative (Const)
+import Control.Applicative ((<|>), many)
+import Control.Monad (void, guard, replicateM)
 import Data.Bifunctor (second)
 import Data.ByteString qualified as B
-import Data.Functor.Identity (Identity)
+import Data.Functor (($>))
 import Data.Map qualified as M
 import Data.Maybe (mapMaybe)
 import Data.Text qualified as T
@@ -20,35 +19,58 @@ import Text.Megaparsec.Char qualified as PC
 
 type Parser = P.Parsec Void T.Text
 
-type ValidCreds = Creds Maybe
-type NorthPoleCreds = Creds (Const Void)
-type Passport = Creds Identity
+data Creds = MkCreds
+    { crBirthYear :: Int
+    , crIssueYear :: Int
+    , crExpirationYear :: Int
+    , crHeight :: T.Text
+    , crHairColour :: T.Text
+    , crEyeColour :: T.Text
+    , crPassportID :: T.Text
+    , crCountryID :: Maybe T.Text
+    } deriving (Eq, Ord, Show, Read)
 
-data Creds f = MkCreds
-    { birthYear :: Int
-    , issueYear :: Int
-    , expirationYear :: Int
-    , height :: T.Text
-    , hairColour :: T.Text
-    , eyeColour :: T.Text
-    , passportID :: T.Text
-    , countryID :: f T.Text
-    }
+data StrictCreds = MkStrictCreds
+    { stBirthYear :: Int
+    , stIssueYear :: Int
+    , stExpirationYear :: Int
+    , stHeight :: Height
+    , stHairColour :: RGB
+    , stEyeColour :: EyeColour
+    , stPassportID :: Int
+    , stCountryID :: Maybe T.Text
+    } deriving (Eq, Ord, Show, Read)
 
-deriving instance Eq (f T.Text) => Eq (Creds f)
-deriving instance Ord (f T.Text) => Ord (Creds f)
-deriving instance Show (f T.Text) => Show (Creds f)
-deriving instance Read (f T.Text) => Read (Creds f)
+data RGB = MkRGB
+    { red :: Int
+    , green :: Int
+    , blue :: Int
+    } deriving (Bounded, Eq, Ord, Show, Read)
+
+data Height = MkHeight
+    { hgtAmount :: Int
+    , hgtUnit :: Unit
+    } deriving (Bounded, Eq, Ord, Show, Read)
+
+data Unit = Cm | In
+    deriving (Bounded, Enum, Eq, Ord, Show, Read)
+
+data EyeColour = Amber | Blue | Brown | Grey | Green | Hazel | Other
+    deriving (Bounded, Enum, Eq, Ord, Show, Read)
 
 main :: IO ()
 main = do
     input <- parseInput <$> readFileUtf8 "day-04/input.txt"
     print $ part1 input
+    print $ part2 input
 
 part1 :: [M.Map T.Text T.Text] -> Int
 part1 = mapMaybe parseCreds .> length
 
-parseCreds :: M.Map T.Text T.Text -> Maybe ValidCreds
+part2 :: [M.Map T.Text T.Text] -> Int
+part2 = mapMaybe parseCredsStrict .> length
+
+parseCreds :: M.Map T.Text T.Text -> Maybe Creds
 parseCreds dict = do
     byr <- P.parseMaybe parseYear =<< M.lookup "byr" dict
     iyr <- P.parseMaybe parseYear =<< M.lookup "iyr" dict
@@ -59,18 +81,88 @@ parseCreds dict = do
     pid <- M.lookup "pid" dict
     let cid = M.lookup "cid" dict
     pure $ MkCreds
-        { birthYear = byr
-        , issueYear = iyr
-        , expirationYear = eyr
-        , height = hgt
-        , hairColour = hcl
-        , eyeColour = ecl
-        , passportID = pid
-        , countryID = cid
+        { crBirthYear = byr
+        , crIssueYear = iyr
+        , crExpirationYear = eyr
+        , crHeight = hgt
+        , crHairColour = hcl
+        , crEyeColour = ecl
+        , crPassportID = pid
+        , crCountryID = cid
         }
 
 parseYear :: Parser Int
 parseYear = read <$> P.some PC.digitChar
+
+parseCredsStrict :: M.Map T.Text T.Text -> Maybe StrictCreds
+parseCredsStrict dict = do
+    byr <- P.parseMaybe (year 1920 2002) =<< M.lookup "byr" dict
+    iyr <- P.parseMaybe (year 2010 2020) =<< M.lookup "iyr" dict
+    eyr <- P.parseMaybe (year 2020 2030) =<< M.lookup "eyr" dict
+    hgt <- P.parseMaybe height =<< M.lookup "hgt" dict
+    hcl <- P.parseMaybe parseRGBColStrict =<< M.lookup "hcl" dict
+    ecl <- P.parseMaybe parseEyeColStrict =<< M.lookup "ecl" dict
+    pid <- P.parseMaybe parsePassIDStrict =<< M.lookup "pid" dict
+    let cid = M.lookup "cid" dict
+    pure $ MkStrictCreds
+        { stBirthYear = byr
+        , stIssueYear = iyr
+        , stExpirationYear = eyr
+        , stHeight = hgt
+        , stHairColour = hcl
+        , stEyeColour = ecl
+        , stPassportID = pid
+        , stCountryID = cid
+        }
+  where
+    year a b = parseYearStrict $ between a b
+    height = parseHeightStrict $ \(MkHeight amt unit) -> case unit of
+        Cm -> between 150 193 amt
+        In -> between 59 76 amt
+
+parseYearStrict :: (Int -> Bool) -> Parser Int
+parseYearStrict f = do
+    year <- read <$> replicateM 4 PC.digitChar
+    P.eof
+    guard $ f year
+    pure year
+
+parseHeightStrict :: (Height -> Bool) -> Parser Height
+parseHeightStrict f = do
+    amt <- read <$> many PC.digitChar
+    unit <- (PC.string "cm" $> Cm) <|> (PC.string "in" $> In)
+    P.eof
+    let height = MkHeight amt unit
+    guard $ f height
+    pure height
+
+parseRGBColStrict :: Parser RGB
+parseRGBColStrict = do
+    void $ PC.char '#'
+    let readCol cs = read ("0x" <> cs)
+        legalChars = "0123456789abcdef" :: [Char]
+        component = readCol <$> replicateM 2 (P.oneOf legalChars)
+    rgb <- MkRGB <$> component <*> component <*> component
+    P.eof
+    pure rgb
+
+parseEyeColStrict :: Parser EyeColour
+parseEyeColStrict = do
+    col <- (PC.string "amb" $> Amber)
+        <|> (PC.string "blu" $> Blue)
+        <|> (PC.string "brn" $> Brown)
+        <|> (PC.string "gry" $> Grey)
+        <|> (PC.string "grn" $> Green)
+        <|> (PC.string "hzl" $> Hazel)
+        <|> (PC.string "oth" $> Other)
+    P.eof
+    pure col
+
+parsePassIDStrict :: Parser Int
+parsePassIDStrict = do
+    ds <- replicateM 9 PC.digitChar
+    P.eof
+    pure $ read ds
 
 parseInput :: T.Text -> [M.Map T.Text T.Text]
 parseInput txt =
@@ -81,3 +173,6 @@ parseInput txt =
 
 readFileUtf8 :: FilePath -> IO T.Text
 readFileUtf8 path = TE.decodeUtf8 <$> B.readFile path
+
+between :: Ord a => a -> a -> a -> Bool
+between a b x = (a <= x) && (x <= b)
