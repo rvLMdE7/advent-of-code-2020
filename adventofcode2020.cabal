@@ -22,9 +22,11 @@ common common-lib-options
     , bytestring
     , flow
     , text
+    , containers
     , vector
     , megaparsec
     , th-printf
+    , pretty-simple
   ghc-options: -Wall
 
 common common-exe-options
