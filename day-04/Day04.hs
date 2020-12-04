@@ -72,9 +72,9 @@ part2 = mapMaybe parseCredsStrict .> length
 
 parseCreds :: M.Map T.Text T.Text -> Maybe Creds
 parseCreds dict = do
-    byr <- P.parseMaybe parseYear =<< M.lookup "byr" dict
-    iyr <- P.parseMaybe parseYear =<< M.lookup "iyr" dict
-    eyr <- P.parseMaybe parseYear =<< M.lookup "eyr" dict
+    byr <- M.lookup "byr" dict >>= P.parseMaybe parseYear
+    iyr <- M.lookup "iyr" dict >>= P.parseMaybe parseYear
+    eyr <- M.lookup "eyr" dict >>= P.parseMaybe parseYear
     hgt <- M.lookup "hgt" dict
     hcl <- M.lookup "hcl" dict
     ecl <- M.lookup "ecl" dict
@@ -96,13 +96,13 @@ parseYear = read <$> P.some PC.digitChar
 
 parseCredsStrict :: M.Map T.Text T.Text -> Maybe StrictCreds
 parseCredsStrict dict = do
-    byr <- P.parseMaybe (year 1920 2002) =<< M.lookup "byr" dict
-    iyr <- P.parseMaybe (year 2010 2020) =<< M.lookup "iyr" dict
-    eyr <- P.parseMaybe (year 2020 2030) =<< M.lookup "eyr" dict
-    hgt <- P.parseMaybe height =<< M.lookup "hgt" dict
-    hcl <- P.parseMaybe parseRGBColStrict =<< M.lookup "hcl" dict
-    ecl <- P.parseMaybe parseEyeColStrict =<< M.lookup "ecl" dict
-    pid <- P.parseMaybe parsePassIDStrict =<< M.lookup "pid" dict
+    byr <- M.lookup "byr" dict >>= P.parseMaybe (year 1920 2002)
+    iyr <- M.lookup "iyr" dict >>= P.parseMaybe (year 2010 2020)
+    eyr <- M.lookup "eyr" dict >>= P.parseMaybe (year 2020 2030)
+    hgt <- M.lookup "hgt" dict >>= P.parseMaybe height
+    hcl <- M.lookup "hcl" dict >>= P.parseMaybe parseRGBColStrict
+    ecl <- M.lookup "ecl" dict >>= P.parseMaybe parseEyeColStrict
+    pid <- M.lookup "pid" dict >>= P.parseMaybe parsePassIDStrict
     let cid = M.lookup "cid" dict
     pure $ MkStrictCreds
         { stBirthYear = byr
