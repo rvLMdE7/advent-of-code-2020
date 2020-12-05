@@ -73,5 +73,5 @@ executable day04
 
 executable day05
   import: common-exe-options
-  mixins: adventofcode2020 (Day04 as Day)
+  mixins: adventofcode2020 (Day05 as Day)
   main-is: Main.hs
