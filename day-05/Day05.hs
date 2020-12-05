@@ -1,12 +1,16 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Day05 where
 
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, guard)
 import Data.ByteString qualified as B
 import Data.Functor (($>))
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Void (Void)
 import Flow ((.>))
+import Language.Haskell.Printf qualified as Printf
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char qualified as PC
 
@@ -36,9 +40,26 @@ main = do
         Left err -> putStrLn $ P.errorBundlePretty err
         Right input -> do
             print $ part1 input
+            either putStrLn print $ part2 input
 
 part1 :: [BoardingPass] -> Int
 part1 = fmap (passToSeat .> seatToId) .> maximum
+
+part2 :: [BoardingPass] -> Either String Int
+part2 passes = case findHoles $ fmap (passToSeat .> seatToId) passes of
+    [seatId] -> Right seatId
+    seatIds -> Left $
+        [Printf.s|expected one hole, but instead found %i holes: %?|]
+            (length seatIds) seatIds
+
+findHoles :: [Int] -> [Int]
+findHoles xs = do
+    x <- if null xs then [] else [minimum xs .. maximum xs]
+    guard $ member (x - 1) && notMember x && member (x + 1)
+    pure x
+  where
+    member = flip S.member $ S.fromList xs
+    notMember = flip S.notMember $ S.fromList xs
 
 seatToId :: Seat -> Int
 seatToId (MkSeat row col) = (row * 8) + col
