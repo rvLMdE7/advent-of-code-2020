@@ -148,13 +148,15 @@ parseRGBColStrict = do
 
 parseEyeColStrict :: Parser EyeColour
 parseEyeColStrict = do
-    col <- (PC.string "amb" $> Amber)
-        <|> (PC.string "blu" $> Blue)
-        <|> (PC.string "brn" $> Brown)
-        <|> (PC.string "gry" $> Grey)
-        <|> (PC.string "grn" $> Green)
-        <|> (PC.string "hzl" $> Hazel)
-        <|> (PC.string "oth" $> Other)
+    col <- P.choice
+        [ PC.string "amb" $> Amber
+        , PC.string "blu" $> Blue
+        , PC.string "brn" $> Brown
+        , PC.string "gry" $> Grey
+        , PC.string "grn" $> Green
+        , PC.string "hzl" $> Hazel
+        , PC.string "oth" $> Other
+        ]
     P.eof
     pure col
 
