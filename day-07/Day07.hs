@@ -36,9 +36,23 @@ main = do
         Right input -> do
             let graph = buildGraph input
             print $ part1 graph
+            print $ part2 graph
 
 part1 :: GL.Graph (Sum Int) Bag -> Int
 part1 graph = S.size $ canContain "shiny gold" graph
+
+part2 :: GL.Graph (Sum Int) Bag -> Int
+part2 graph = mustContain "shiny gold" graph
+
+mustContain :: Bag -> GL.Graph (Sum Int) Bag -> Int
+mustContain bag graph = go bag - 1
+  where
+    go u =
+      let
+        next = G.postSet u graph
+        contrib v = let Sum label = GL.edgeLabel u v graph in label * go v
+      in
+        1 + sum (S.map contrib next)
 
 canContain :: Bag -> GL.Graph (Sum Int) Bag -> S.Set Bag
 canContain bag graph =
