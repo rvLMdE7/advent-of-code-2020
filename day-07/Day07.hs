@@ -47,12 +47,16 @@ part2 graph = mustContain "shiny gold" graph
 mustContain :: Bag -> GL.Graph (Sum Int) Bag -> Int
 mustContain bag graph = go bag - 1
   where
+    go :: Bag -> Int
     go u =
       let
         next = G.postSet u graph
-        contrib v = let Sum label = GL.edgeLabel u v graph in label * go v
+        contrib v = let Sum count = GL.edgeLabel u v graph in count * go v
       in
-        1 + foldr (\v acc -> acc + contrib v) 0 next
+        1 + sumMap contrib next
+
+sumMap :: (Foldable t, Num b) => (a -> b) -> t a -> b
+sumMap f = foldr (\x total -> total + f x) 0
 
 canContain :: Bag -> GL.Graph (Sum Int) Bag -> S.Set Bag
 canContain bag graph =
