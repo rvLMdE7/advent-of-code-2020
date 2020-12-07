@@ -52,7 +52,7 @@ mustContain bag graph = go bag - 1
         next = G.postSet u graph
         contrib v = let Sum label = GL.edgeLabel u v graph in label * go v
       in
-        1 + sum (S.map contrib next)
+        1 + foldr (\v acc -> acc + contrib v) 0 next
 
 canContain :: Bag -> GL.Graph (Sum Int) Bag -> S.Set Bag
 canContain bag graph =
