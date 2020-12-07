@@ -27,6 +27,7 @@ common common-lib-options
     , megaparsec
     , th-printf
     , pretty-simple
+    , algebraic-graphs
   ghc-options: -Wall
 
 common common-exe-options
@@ -45,6 +46,7 @@ library
     , day-04
     , day-05
     , day-06
+    , day-07
   exposed-modules:
       Day01
     , Day02
@@ -52,6 +54,7 @@ library
     , Day04
     , Day05
     , Day06
+    , Day07
 
 executable day01
   import: common-exe-options
@@ -81,4 +84,9 @@ executable day05
 executable day06
   import: common-exe-options
   mixins: adventofcode2020 (Day06 as Day)
+  main-is: Main.hs
+
+executable day07
+  import: common-exe-options
+  mixins: adventofcode2020 (Day07 as Day)
   main-is: Main.hs
