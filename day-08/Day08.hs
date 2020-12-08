@@ -6,7 +6,7 @@ module Day08 where
 
 import Data.ByteString qualified as B
 import Data.Text qualified as T
-import Data.Vector qualified as V
+import Data.IntMap qualified as IM
 import Data.Set qualified as S
 import Data.Text.Encoding qualified as TE
 import Data.Void (Void)
@@ -32,7 +32,7 @@ data Instr = MkInstr
 
 makeLenses ''Instr
 
-type Program = V.Vector Instr
+type Program = IM.IntMap Instr
 
 data ProgramState = MkProgramState
     { _instrPtr :: Int
@@ -43,7 +43,7 @@ data ProgramState = MkProgramState
 
 makeLenses ''ProgramState
 
-data Result = Looped | Stopped
+data Result = Looped | Stopped | Crashed
     deriving (Bounded, Enum, Eq, Ord, Show, Read)
 
 main :: IO ()
@@ -83,7 +83,9 @@ interpProgramUntilLoopOrStop = do
                 Just instr -> do
                     applyInstr instr
                     interpProgramUntilLoopOrStop
-                Nothing -> pure Stopped
+                Nothing -> do
+                    len <- IM.size <$> use program
+                    pure $ if ptr == len then Stopped else Crashed
 
 applyInstr :: Instr -> State ProgramState ()
 applyInstr (MkInstr op n) = case op of
@@ -94,7 +96,7 @@ applyInstr (MkInstr op n) = case op of
         instrPtr += 1
 
 parseProgram :: Parser Program
-parseProgram = V.fromList <$> P.sepEndBy1 parseInstr PC.newline
+parseProgram = IM.fromList . zip [0..] <$> P.sepEndBy1 parseInstr PC.newline
 
 parseInstr :: Parser Instr
 parseInstr = MkInstr <$> parseOperation <*> parseInput
