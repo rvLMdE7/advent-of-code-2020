@@ -13,11 +13,15 @@ import Data.Void (Void)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char qualified as PC
 import Text.Megaparsec.Char.Lexer qualified as PCL
+import Flow ((.>))
 import Data.Functor (($>))
 import Control.Monad.State ( MonadState, runState, State )
 import Optics
-    ( Optic, Is, A_Setter, (%), (^.), preuse, use, makeLenses, at, ix )
+    ( Optic, Is, A_Setter, (%), (^.), (&), (%~), preuse, use, makeLenses, at
+    , ix, view, _2 )
 import Optics.State.Operators ((%=), (?=))
+import Data.Maybe (listToMaybe)
+import Control.Monad (guard)
 
 
 type Parser = P.Parsec Void T.Text
@@ -53,6 +57,7 @@ main = do
         Left err -> putStrLn $ P.errorBundlePretty err
         Right input -> do
             print $ part1 input
+            print $ part2 input
 
 part1 :: Program -> Maybe Int
 part1 prog = if result == Looped
@@ -60,6 +65,11 @@ part1 prog = if result == Looped
     else Nothing
   where
     (result, progState) = runProgram prog
+
+part2 :: Program -> Maybe Int
+part2 prog = do
+    progState <- snd <$> tryFixAndRun prog
+    pure (progState ^. accumulator)
 
 runProgram :: Program -> (Result, ProgramState)
 runProgram prog = runState interpProgramUntilLoopOrStop $
@@ -69,6 +79,24 @@ runProgram prog = runState interpProgramUntilLoopOrStop $
         , _program = prog
         , _visited = S.empty
         }
+
+tryFixAndRun :: Program -> Maybe (Program, ProgramState)
+tryFixAndRun prog = listToMaybe $ do
+    fixed <- possibleFixes prog
+    let (result, progState) = runProgram fixed
+    guard $ result == Stopped
+    pure (fixed, progState)
+
+possibleFixes :: Program -> [Program]
+possibleFixes prog = [ prog & ix i % operation %~ fix | i <- possibles ]
+  where
+    fix op = case op of
+        Jmp -> Nop
+        Nop -> Jmp
+        Acc -> Acc
+    possibles = fst <$> filter couldTryFix (IM.toList prog)
+    couldTryFix = view (_2 % operation) .> maybeCorrupt
+    maybeCorrupt op = op `elem` [Jmp, Nop]
 
 interpProgramUntilLoopOrStop :: State ProgramState Result
 interpProgramUntilLoopOrStop = do
