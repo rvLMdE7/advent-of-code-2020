@@ -14,9 +14,16 @@ main :: IO ()
 main = do
     xmas <- parseXmas <$> readFileUtf8 "day-09/input.txt"
     print $ part1 xmas
+    print $ part2 xmas
 
 part1 :: VU.Vector Int -> Maybe Int
 part1 = firstValNoDistinctPairSumsToInPrevN 25
+
+part2 :: VU.Vector Int -> Maybe Int
+part2 vec = do
+    target <- part1 vec
+    slice <- findSliceSumsToOfSizeAtLeast 2 target vec
+    pure (VU.minimum slice + VU.maximum slice)
 
 firstValNoDistinctPairSumsToInPrevN
     :: (Eq a, Num a, VU.Unbox a) => Int -> VU.Vector a -> Maybe a
@@ -44,6 +51,31 @@ findDistinctPairSumsTo target =
     distinctPairs .> filter (sumsTo target) .> listToMaybe
   where
     sumsTo x (a, b) = x == a + b
+
+findSliceSumsToOfSizeAtLeast
+    :: (Eq a, Num a, VU.Unbox a)
+    => Int
+    -> a
+    -> VU.Vector a
+    -> Maybe (VU.Vector a)
+findSliceSumsToOfSizeAtLeast n target vec = listToMaybe $ do
+    slice <- allSlicesOfSizeAtLeast n vec
+    guard $ VU.sum slice == target
+    pure slice
+
+allSlicesOfSizeAtLeast :: VU.Unbox a => Int -> VU.Vector a -> [VU.Vector a]
+allSlicesOfSizeAtLeast n vec = slice <$> allSliceIndicesOfSizeAtLeast n vec
+  where
+    slice (i, j) = VU.slice i j vec
+
+allSliceIndicesOfSizeAtLeast
+    :: VU.Unbox a => Int -> VU.Vector a -> [(Int, Int)]
+allSliceIndicesOfSizeAtLeast n vec = do
+    base <- [0 .. size - n]
+    len <- [n .. size - base]
+    pure (base, len)
+  where
+    size = VU.length vec
 
 distinctPairs :: (Eq a, VU.Unbox a) => VU.Vector a -> [(a, a)]
 distinctPairs vec = filter distinct allPairs
