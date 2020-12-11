@@ -1,8 +1,13 @@
 module Day11 where
 
 import Data.ByteString qualified as B
+import Data.Foldable qualified as F
+import Data.Function ((&))
 import Data.Functor (($>))
 import Data.Map qualified as M
+import Data.Maybe (mapMaybe, listToMaybe, fromMaybe)
+import Data.Sequence (Seq((:|>)))
+import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Data.Void (Void)
@@ -76,7 +81,28 @@ neighbours dict pt = V3 (row (-1)) (row 0) (row 1)
     row y = V3 (get (-1) y) (get 0 y) (get 1 y)
 
 neighboursNew :: M.Map (V2 Int) Tile -> V2 Int -> V3 (V3 Tile)
-neighboursNew dict pt = undefined
+neighboursNew dict pt = V3 (row (-1)) (row 0) (row 1)
+  where
+    get x y
+        | x == 0 && y == 0 = M.findWithDefault Floor pt dict
+        | otherwise = lookupInDirOf (V2 x y) dict pt
+            & dropWhile (== Floor)
+            & listToMaybe
+            & fromMaybe Floor
+    row y = V3 (get (-1) y) (get 0 y) (get 1 y)
+
+lookupInDirOf :: V2 Int -> M.Map (V2 Int) a -> V2 Int -> [a]
+lookupInDirOf dir dict pt =
+    inDirOf dir dict pt
+        & F.toList
+        & mapMaybe (dict M.!?)
+
+inDirOf :: V2 Int -> M.Map (V2 Int) a -> V2 Int -> Seq (V2 Int)
+inDirOf dir dict pos = go Seq.Empty (pos + dir)
+  where
+    go acc pt = if pt `M.member` dict
+        then go (acc :|> pt) (pt + dir)
+        else acc
 
 parseTiles :: Parser (M.Map (V2 Int) Tile)
 parseTiles = do
