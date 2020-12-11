@@ -24,9 +24,13 @@ main = do
         Left err -> putStrLn $ P.errorBundlePretty err
         Right seats -> do
             print $ part1 seats
+            print $ part2 seats
 
 part1 :: M.Map (V2 Int) Tile -> Int
 part1 = fixSeats .> count Occupied
+
+part2 :: M.Map (V2 Int) Tile -> Int
+part2 = fixSeatsNew .> count Occupied
 
 count :: Eq a => a -> M.Map k a -> Int
 count x = M.filter (== x) .> M.size
@@ -36,8 +40,16 @@ fixSeats dict = if next == dict then dict else fixSeats next
   where
     next = nextRound dict
 
+fixSeatsNew :: M.Map (V2 Int) Tile -> M.Map (V2 Int) Tile
+fixSeatsNew dict = if next == dict then dict else fixSeatsNew next
+  where
+    next = nextRoundNew dict
+
 nextRound :: M.Map (V2 Int) Tile -> M.Map (V2 Int) Tile
 nextRound dict = M.mapWithKey (\pt _tile -> nextSeatAt dict pt) dict
+
+nextRoundNew :: M.Map (V2 Int) Tile -> M.Map (V2 Int) Tile
+nextRoundNew dict = M.mapWithKey (\pt _tile -> nextSeatAtNew dict pt) dict
 
 nextSeatAt :: M.Map (V2 Int) Tile -> V2 Int -> Tile
 nextSeatAt dict pt
@@ -48,11 +60,23 @@ nextSeatAt dict pt
     V3 (V3 a b c) (V3 d seat e) (V3 f g h) = neighbours dict pt
     adj = [a, b, c, d, e, f, g, h]
 
+nextSeatAtNew :: M.Map (V2 Int) Tile -> V2 Int -> Tile
+nextSeatAtNew dict pt
+    | seat == Empty && notElem Occupied adj = Occupied
+    | seat == Occupied && length (filter (== Occupied) adj) >= 5 = Empty
+    | otherwise = seat
+  where
+    V3 (V3 a b c) (V3 d seat e) (V3 f g h) = neighboursNew dict pt
+    adj = [a, b, c, d, e, f, g, h]
+
 neighbours :: M.Map (V2 Int) Tile -> V2 Int -> V3 (V3 Tile)
 neighbours dict pt = V3 (row (-1)) (row 0) (row 1)
   where
     get x y = M.findWithDefault Floor (pt + V2 x y) dict
     row y = V3 (get (-1) y) (get 0 y) (get 1 y)
+
+neighboursNew :: M.Map (V2 Int) Tile -> V2 Int -> V3 (V3 Tile)
+neighboursNew dict pt = undefined
 
 parseTiles :: Parser (M.Map (V2 Int) Tile)
 parseTiles = do
