@@ -17,8 +17,9 @@ The way this repository is set up hits a nice sweet spot:
 - IDE support works well, as all the code is considered "library" code, and
   it's all under one cabal package.
 - Nonetheless (using a little bit of backpack trickery), we provide an
-  executable for each day with minimal effort. So you can do `cabal run dayXX`
-  (or `stack run dayXX`) to run the compiled executable for each day.
+  executable for each day with minimal effort. So you can do
+  `cabal run day-XX` (or `stack run day-XX`) to run the compiled executable
+  for each day.
 
 (Note: we have the stack resolver set as a nightly snapshot, rather than a LTS
 snapshot, because at time of writing there wasn't yet an LTS release supporting

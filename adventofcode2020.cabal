@@ -69,62 +69,62 @@ library
     , Day11
     , Day12
 
-executable day01
+executable day-01
   import: common-exe-options
   mixins: adventofcode2020 (Day01 as Day)
   main-is: Main.hs
 
-executable day02
+executable day-02
   import: common-exe-options
   mixins: adventofcode2020 (Day02 as Day)
   main-is: Main.hs
 
-executable day03
+executable day-03
   import: common-exe-options
   mixins: adventofcode2020 (Day03 as Day)
   main-is: Main.hs
 
-executable day04
+executable day-04
   import: common-exe-options
   mixins: adventofcode2020 (Day04 as Day)
   main-is: Main.hs
 
-executable day05
+executable day-05
   import: common-exe-options
   mixins: adventofcode2020 (Day05 as Day)
   main-is: Main.hs
 
-executable day06
+executable day-06
   import: common-exe-options
   mixins: adventofcode2020 (Day06 as Day)
   main-is: Main.hs
 
-executable day07
+executable day-07
   import: common-exe-options
   mixins: adventofcode2020 (Day07 as Day)
   main-is: Main.hs
 
-executable day08
+executable day-08
   import: common-exe-options
   mixins: adventofcode2020 (Day08 as Day)
   main-is: Main.hs
 
-executable day09
+executable day-09
   import: common-exe-options
   mixins: adventofcode2020 (Day09 as Day)
   main-is: Main.hs
 
-executable day10
+executable day-10
   import: common-exe-options
   mixins: adventofcode2020 (Day10 as Day)
   main-is: Main.hs
 
-executable day11
+executable day-11
   import: common-exe-options
   mixins: adventofcode2020 (Day11 as Day)
   main-is: Main.hs
 
-executable day12
+executable day-12
   import: common-exe-options
   mixins: adventofcode2020 (Day12 as Day)
   main-is: Main.hs
