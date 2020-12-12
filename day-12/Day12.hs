@@ -49,6 +49,7 @@ data NavInstr = MkNavInstr
 data ShipState = MkShipState
     { shipPhase :: !Double
     , shipPosition :: !(Complex Double)
+    , wayPosition :: !(Complex Double)
     } deriving (Eq, Read, Show)
 
 makeFieldLabelsWith noPrefixFieldLabels ''ShipState
@@ -60,22 +61,35 @@ main = do
         Left err -> putStrLn $ P.errorBundlePretty err
         Right navInstrs -> do
             print $ part1 navInstrs
+            print $ pilotShip2 navInstrs
+
+part2 :: [NavInstr] -> Double
+part2 = pilotShip2 .> view #shipPosition .> manhattanNorm
 
 part1 :: [NavInstr] -> Double
-part1 = pilotShip .> view #shipPosition .> manhattanNorm
+part1 = pilotShip1 .> view #shipPosition .> manhattanNorm
 
-pilotShip :: [NavInstr] -> ShipState
-pilotShip instrs = execState (applyInstrs instrs) $
+pilotShip2 :: [NavInstr] -> ShipState
+pilotShip2 instrs = execState (applyInstrs2 instrs) $
     MkShipState
         { shipPhase = 0
         , shipPosition = pure 0
+        , wayPosition = 10 :+ 1
         }
 
-applyInstrs :: [NavInstr] -> State ShipState ()
-applyInstrs = foldr (\instr st -> applyInstr instr *> st) (pure ())
+pilotShip1 :: [NavInstr] -> ShipState
+pilotShip1 instrs = execState (applyInstrs1 instrs) $
+    MkShipState
+        { shipPhase = 0
+        , shipPosition = pure 0
+        , wayPosition = pure 0
+        }
 
-applyInstr :: NavInstr -> State ShipState ()
-applyInstr (MkNavInstr action intVal) = case action of
+applyInstrs1 :: [NavInstr] -> State ShipState ()
+applyInstrs1 = foldr (\instr st -> applyInstr1 instr *> st) (pure ())
+
+applyInstr1 :: NavInstr -> State ShipState ()
+applyInstr1 (MkNavInstr action intVal) = case action of
     MoveNorth -> #shipPosition += (0 :+ val)
     MoveSouth -> #shipPosition -= (0 :+ val)
     MoveEast -> #shipPosition += (val :+ 0)
@@ -87,6 +101,29 @@ applyInstr (MkNavInstr action intVal) = case action of
         #shipPosition += fmap (* val) (cisDegrees phase)
   where
     val = fromIntegral intVal
+
+applyInstrs2 :: [NavInstr] -> State ShipState ()
+applyInstrs2 = foldr (\instr st -> applyInstr2 instr *> st) (pure ())
+
+applyInstr2 :: NavInstr -> State ShipState ()
+applyInstr2 (MkNavInstr action intVal) = case action of
+    MoveNorth -> #wayPosition += (0 :+ val)
+    MoveSouth -> #wayPosition -= (0 :+ val)
+    MoveEast -> #wayPosition += (val :+ 0)
+    MoveWest -> #wayPosition -= (val :+ 0)
+    TurnLeft -> do
+        shipPos <- use #shipPosition
+        #wayPosition %= relTo shipPos (* cisDegrees val)
+    TurnRight -> do
+        shipPos <- use #shipPosition
+        #wayPosition %= relTo shipPos (* cisDegrees (-val))
+    MoveForward -> do
+        shipPos <- use #shipPosition
+        wayPos <- use #wayPosition
+        #shipPosition += fmap (* val) (wayPos - shipPos)
+  where
+    val = fromIntegral intVal
+    relTo ship f = subtract ship .> f .> (+ ship)
 
 cisDegrees :: Double -> Complex Double
 cisDegrees deg
