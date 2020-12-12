@@ -61,7 +61,7 @@ main = do
         Left err -> putStrLn $ P.errorBundlePretty err
         Right navInstrs -> do
             print $ part1 navInstrs
-            print $ pilotShip2 navInstrs
+            print $ part2 navInstrs
 
 part2 :: [NavInstr] -> Double
 part2 = pilotShip2 .> view #shipPosition .> manhattanNorm
@@ -111,28 +111,23 @@ applyInstr2 (MkNavInstr action intVal) = case action of
     MoveSouth -> #wayPosition -= (0 :+ val)
     MoveEast -> #wayPosition += (val :+ 0)
     MoveWest -> #wayPosition -= (val :+ 0)
-    TurnLeft -> do
-        shipPos <- use #shipPosition
-        #wayPosition %= relTo shipPos (* cisDegrees val)
-    TurnRight -> do
-        shipPos <- use #shipPosition
-        #wayPosition %= relTo shipPos (* cisDegrees (-val))
+    TurnLeft -> #wayPosition *= cisDegrees val
+    TurnRight -> #wayPosition *= cisDegrees (-val)
     MoveForward -> do
-        shipPos <- use #shipPosition
         wayPos <- use #wayPosition
-        #shipPosition += fmap (* val) (wayPos - shipPos)
+        #shipPosition += fmap (* val) wayPos
   where
     val = fromIntegral intVal
-    relTo ship f = subtract ship .> f .> (+ ship)
 
 cisDegrees :: Double -> Complex Double
-cisDegrees deg
+cisDegrees degRaw
     | deg == 0 = 1 :+ 0
     | deg == 90 = 0 :+ 1
     | deg == 180 = (-1) :+ 0
     | deg == 270 = 0 :+ (-1)
     | otherwise = cis rad
   where
+    deg = degRaw `modulo` 360
     rad = deg * pi / 180
 
 modulo :: Double -> Double -> Double
@@ -182,3 +177,10 @@ optic += x = optic %= (+ x)
     -> a
     -> m ()
 optic -= x = optic %= subtract x
+
+(*=)
+    :: (Is k A_Setter, MonadState s m, Num a)
+    => Optic k is s s a a
+    -> a
+    -> m ()
+optic *= x = optic %= (* x)
