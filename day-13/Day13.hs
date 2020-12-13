@@ -86,7 +86,7 @@ parseInput2 = do
     void $ PC.hspace *> PC.newline
     times <- P.sepBy1 time (PC.hspace *> PC.char ',')
     let maybeIndex may i = (const i &&& id) <$> may
-        list = mapMaybe (uncurry maybeIndex) (zip times [0..])
+        list = mapMaybe (uncurry maybeIndex) (zip times [0,-1..])
     PC.space
     if null list
         then fail "not enough inputs"
