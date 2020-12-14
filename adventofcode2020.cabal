@@ -14,6 +14,7 @@ common common-lang-options
   default-extensions:
       ImportQualifiedPost
     , NumericUnderscores
+    , BinaryLiterals
 
 common common-lib-options
   import: common-lang-options
@@ -56,6 +57,7 @@ library
     , day-11
     , day-12
     , day-13
+    , day-14
   exposed-modules:
       Day01
     , Day02
@@ -70,6 +72,7 @@ library
     , Day11
     , Day12
     , Day13
+    , Day14
 
 executable day-01
   import: common-exe-options
@@ -134,4 +137,9 @@ executable day-12
 executable day-13
   import: common-exe-options
   mixins: adventofcode2020 (Day13 as Day)
+  main-is: Main.hs
+
+executable day-14
+  import: common-exe-options
+  mixins: adventofcode2020 (Day14 as Day)
   main-is: Main.hs
