@@ -25,6 +25,7 @@ common common-lib-options
     , text
     , mtl
     , containers
+    , nonempty-containers
     , vector
     , megaparsec
     , th-printf
@@ -58,6 +59,7 @@ library
     , day-12
     , day-13
     , day-14
+    , day-15
   exposed-modules:
       Day01
     , Day02
@@ -73,6 +75,7 @@ library
     , Day12
     , Day13
     , Day14
+    , Day15
 
 executable day-01
   import: common-exe-options
@@ -142,4 +145,9 @@ executable day-13
 executable day-14
   import: common-exe-options
   mixins: adventofcode2020 (Day14 as Day)
+  main-is: Main.hs
+
+executable day-15
+  import: common-exe-options
+  mixins: adventofcode2020 (Day15 as Day)
   main-is: Main.hs
