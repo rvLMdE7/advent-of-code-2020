@@ -13,10 +13,15 @@ import Data.Sequence.NonEmpty qualified as Seq.NE
 
 main :: IO ()
 main = do
-    print $ part1 (2 :| [20, 0, 4, 1, 17])
+    let input = 2 :| [20, 0, 4, 1, 17]
+    print $ part1 input
+    print $ part2 input
 
 part1 :: NonEmpty Int -> Int
 part1 input = playGame input (2020 - length input) & Seq.NE.last
+
+part2 :: NonEmpty Int -> Int
+part2 input = playGame input (30_000_000 - length input) & Seq.NE.last
 
 playGame :: NonEmpty Int -> Int -> NESeq Int
 playGame input n = execState (takeTurns n) (Seq.NE.fromList input)
