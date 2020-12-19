@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Day19 where
 
 import Control.Applicative ((<|>))
@@ -5,6 +7,7 @@ import Control.Monad (void)
 import Data.ByteString qualified as Bytes
 import Data.Char (isSpace)
 import Data.Either (isRight)
+import Data.Function ((&))
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Data.List.NonEmpty (NonEmpty((:|)))
@@ -14,6 +17,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Enc
 import Data.Void (Void)
 import Flow ((.>))
+import Language.Haskell.Printf qualified as Printf
 import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as Parse
 import Text.Megaparsec.Char qualified as Parse.Char
@@ -32,11 +36,28 @@ main = do
     case Parse.parse (parseInput <* Parse.eof) "day 19 input" file of
         Left err -> putStrLn $ Parse.errorBundlePretty err
         Right (rules, msgs) -> do
-            let parser = compile rules 0
-            pPrint $ part1 parser msgs
+            pPrint $ part1 rules msgs
+            pPrint $ part2 rules msgs
 
-part1 :: Parser () -> [Text] -> Int
-part1 rule = matches rule .> length
+part1 :: IntMap Rule -> [Text] -> Int
+part1 rules = matches (compile rules 0) .> length
+
+part2 :: IntMap Rule -> [Text] -> Int
+part2 rules = matches (compile rules' 0) .> length
+  where
+    rules' = rules
+        & IntMap.insert 8
+            ( SubRules
+                [ 42 :| []
+                , 42 :| [8]
+                ]
+            )
+        & IntMap.insert 11
+            ( SubRules
+                [ 42 :| [31]
+                , 42 :| [11, 31]
+                ]
+            )
 
 matches :: Parser () -> [Text] -> [Text]
 matches parser = filter (match parser)
@@ -46,7 +67,7 @@ match parser = Parse.parse (parser <* Parse.eof) "match" .> isRight
 
 compile :: IntMap Rule -> Int -> Parser ()
 compile rules n = case rules IntMap.!? n of
-    Nothing -> pure ()
+    Nothing -> fail $ [Printf.s|rule %i not present|] n
     Just (SingleChar c) -> void $ Parse.Char.char c
     Just (SubRules subRules) -> Parse.choice $ do
         first :| rest <- subRules
