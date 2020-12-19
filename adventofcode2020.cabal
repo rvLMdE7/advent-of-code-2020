@@ -61,6 +61,7 @@ library
     , day-14
     , day-15
     , day-16
+    , day-18
   exposed-modules:
       Day01
     , Day02
@@ -78,6 +79,7 @@ library
     , Day14
     , Day15
     , Day16
+    , Day18
 
 executable day-01
   import: common-exe-options
@@ -157,4 +159,9 @@ executable day-15
 executable day-16
   import: common-exe-options
   mixins: adventofcode2020 (Day16 as Day)
+  main-is: Main.hs
+
+executable day-18
+  import: common-exe-options
+  mixins: adventofcode2020 (Day18 as Day)
   main-is: Main.hs
