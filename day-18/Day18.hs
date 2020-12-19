@@ -4,6 +4,7 @@ module Day18 where
 
 import Control.Applicative ((<|>))
 import Control.Monad (void)
+import Control.Monad.Combinators.Expr (makeExprParser, Operator(InfixL))
 import Control.Monad.State (State, get, put, runState)
 import Data.ByteString qualified as Byt
 import Data.Either (partitionEithers)
@@ -45,6 +46,7 @@ main = do
         Left err -> putStrLn $ Par.errorBundlePretty err
         Right prog -> do
             pPrint $ part1 prog
+            pPrint $ part2 prog
 
 part1 :: [[Token Int]] -> Either [String] Int
 part1 tokens =
@@ -58,6 +60,44 @@ part1 tokens =
         (Right (), Just expr) -> Right expr
         (Right (), Nothing) -> Left "bad expr"
         (Left err, _mExpr) -> Left $ Text.Lzy.unpack $ pShowNoColor err
+
+part2 :: [[Token Int]] -> Either [String] Int
+part2 tokens =
+    if null errs
+        then Right $ sum $ fmap evalExpr exprs
+        else Left $ fmap (pShowNoColor .> Text.Lzy.unpack) errs
+  where
+    (errs, exprs) = partitionEithers $ fmap getExpr tokens
+    getExpr = Par.runParser parseAdvExpr "part 2"
+
+parseAdvExpr :: Ord a => Parser [Token a] (Expr a)
+parseAdvExpr = makeExprParser (parseAdvLitExpr <|> parseAdvParenExpr) opTable
+  where
+    opTable =
+        [ [ infixL (ExpBinOp Add) (TokBinOp Add) ]
+        , [ infixL (ExpBinOp Mult) (TokBinOp Mult) ]
+        ]
+    infixL expr tok = InfixL (expr <$ Par.single tok)
+
+parseAdvLitExpr :: Ord a => Parser [Token a] (Expr a)
+parseAdvLitExpr = do
+    TokLit x <- Par.satisfy isLit
+    pure $ ExpLit x
+  where
+    isLit = \case
+        TokLit _ -> True
+        _tok -> False
+
+parseAdvParenExpr :: Ord a => Parser [Token a] (Expr a)
+parseAdvParenExpr =
+    Par.between (Par.satisfy isLParen) (Par.satisfy isRParen) parseAdvExpr
+  where
+    isLParen = \case
+        TokLParen -> True
+        _tok -> False
+    isRParen = \case
+        TokRParen -> True
+        _tok -> False
 
 parseExpr :: Ord a => StateParser (Maybe (Expr a)) [Token a] ()
 parseExpr = void $ Par.some $ Par.choice
