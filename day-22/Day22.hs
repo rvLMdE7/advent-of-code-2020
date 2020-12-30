@@ -65,10 +65,17 @@ main = do
         Left err -> putStrLn $ Parse.errorBundlePretty err
         Right decks -> do
             print $ part1 decks
+            print $ part2 decks
 
 part1 :: Decks -> Either String Int
-part1 decks = do
-    lastState <- runExcept $ execStateT playGame initState
+part1 = part playGame
+
+part2 :: Decks -> Either String Int
+part2 = part playGameRecurse
+
+part :: Game () -> Decks -> Either String Int
+part game decks = do
+    lastState <- runExcept $ execStateT game initState
     player <- maybeToEither "no winner" winner lastState
     maybeToEither "no deck" (Map.lookup player) (scoreGame lastState)
   where
@@ -135,10 +142,7 @@ playRoundRecurse = do
     depth <- use #recurseDepth
 
     let deckNum player = if player == One then "one" else "two"
-        topCard player = case decks ^? at player % _Just % ix 0 of
-            Nothing -> throwError $
-                [Printf.s|depth %i: deck %s empty|] depth (deckNum player)
-            Just card -> pure card
+        topCard player = decks ^? at player % _Just % ix 0
         deckSize player = case decks Map.!? player of
             Nothing -> throwError $
                 [Printf.s|depth %i: missing deck %s|] depth (deckNum player)
@@ -146,42 +150,46 @@ playRoundRecurse = do
 
     if decks `Set.member` before
     then #winner ?= One
-    else do
-        (oneCard, twoCard) <- (,) <$> topCard One <*> topCard Two
-        (oneSize, twoSize) <- (,) <$> deckSize One <*> deckSize Two
+    else case (topCard One, topCard Two) of
+        (Nothing, Nothing) -> throwError $
+            [Printf.s|depth %i: both decks empty|] depth
+        (Just _oneCard, Nothing) -> #winner ?= One
+        (Nothing, Just _twoCard) -> #winner ?= Two
+        (Just oneCard, Just twoCard) -> do
+            (oneSize, twoSize) <- (,) <$> deckSize One <*> deckSize Two
 
-        #roundNum += 1
-        #seenBefore %= Set.insert decks
-        withDeck One %= Seq.deleteAt 0
-        withDeck Two %= Seq.deleteAt 0
+            #roundNum += 1
+            #seenBefore %= Set.insert decks
+            withDeck One %= Seq.deleteAt 0
+            withDeck Two %= Seq.deleteAt 0
 
-        let mkNewDeck = \case
-                One -> Seq.drop 1 .> Seq.take oneCard
-                Two -> Seq.drop 1 .> Seq.take twoCard
-            initState = MkGameState
-                { roundNum = 0
-                , playerDecks = Map.mapWithKey mkNewDeck decks
-                , winner = Nothing
-                , seenBefore = Set.empty
-                , recurseDepth = depth + 1
-                }
-            subGame = runExcept $ execStateT playGameRecurse initState
+            let mkNewDeck = \case
+                    One -> Seq.drop 1 .> Seq.take oneCard
+                    Two -> Seq.drop 1 .> Seq.take twoCard
+                initState = MkGameState
+                    { roundNum = 0
+                    , playerDecks = Map.mapWithKey mkNewDeck decks
+                    , winner = Nothing
+                    , seenBefore = Set.empty
+                    , recurseDepth = depth + 1
+                    }
+                subGame = runExcept $ execStateT playGameRecurse initState
 
-        (player, won, lost) <-
-            if (oneSize > oneCard) && (twoSize > twoCard)
-            then case subGame of
-                Left err -> throwError err
-                Right finalState -> case winner finalState of
-                    Just One -> pure (One, oneCard, twoCard)
-                    Just Two -> pure (Two, twoCard, oneCard)
-                    Nothing -> throwError $
-                        [Printf.s|depth %i: no winner|] (depth + 1)
-            else case oneCard `compare` twoCard of
-                LT -> pure (Two, twoCard, oneCard)
-                GT -> pure (One, oneCard, twoCard)
-                EQ -> throwError $ [Printf.s|depth %i: same cards|] depth
+            (player, won, lost) <-
+                if (oneSize > oneCard) && (twoSize > twoCard)
+                then case subGame of
+                    Left err -> throwError err
+                    Right finalState -> case winner finalState of
+                        Just One -> pure (One, oneCard, twoCard)
+                        Just Two -> pure (Two, twoCard, oneCard)
+                        Nothing -> throwError $
+                            [Printf.s|depth %i: no winner|] (depth + 1)
+                else case oneCard `compare` twoCard of
+                    LT -> pure (Two, twoCard, oneCard)
+                    GT -> pure (One, oneCard, twoCard)
+                    EQ -> throwError $ [Printf.s|depth %i: same cards|] depth
 
-        withDeck player %= appendEnd won lost
+            withDeck player %= appendEnd won lost
 
 (+=)
     :: (Is k A_Setter, MonadState s m, Num a)
