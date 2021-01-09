@@ -1,12 +1,15 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Day17 where
 
 import Control.Arrow ((&&&))
 import Control.Concurrent.STM (STM)
 import Control.Concurrent.STM qualified as STM
-import Control.Lens (view)
 import Control.Monad (replicateM_, when, unless, guard)
 import Data.ByteString qualified as Bytes
 import Data.Containers.ListUtils (nubOrd)
@@ -21,9 +24,11 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Enc
 import Data.Traversable (for)
+import Data.Vector qualified as Vec
 import Data.Void (Void)
 import Flow ((.>))
-import Linear (V2(V2), V3(V3), _x, _y, _z)
+import GHC.TypeLits (type (+))
+import Linear.V (Dim, dim, V(toVector, V))
 import ListT qualified
 import StmContainers.Map qualified as STM (Map)
 import StmContainers.Map qualified as STM.Map
@@ -42,26 +47,28 @@ main = do
     case Parse.runParser parseGrid "day 17 input" file of
         Left err -> putStrLn $ Parse.errorBundlePretty err
         Right grid -> do
-            let lattice = injectAtZ 0 grid
-            print =<< STM.atomically (part1 6 lattice)
+            let lattice = injectInit 0 grid
+                hyper = injectInit 0 lattice
+            print =<< STM.atomically (part 6 lattice)
+            print =<< STM.atomically (part 6 hyper)
 
-part1 :: Int -> Map (V3 Int) Status -> STM Int
-part1 n begin = do
-    end <- part1' n begin
+part :: Dim n => Int -> Map (V n Int) Status -> STM Int
+part i begin = do
+    end <- part' i begin
     pure $ length $ Map.filter (== Active) end
 
-part1' :: Int -> Map (V3 Int) Status -> STM (Map (V3 Int) Status)
-part1' n static = do
+part' :: Dim n => Int -> Map (V n Int) Status -> STM (Map (V n Int) Status)
+part' i static = do
     mut <- STM.Map.new
     for_ (Map.toList static) $ \(pt, status) ->
         STM.Map.insert status pt mut
-    steps n mut
+    steps i mut
     viewMap mut
 
-steps :: Int -> STM.Map (V3 Int) Status -> STM ()
-steps n lattice = replicateM_ n $ step lattice
+steps :: Dim n => Int -> STM.Map (V n Int) Status -> STM ()
+steps i lattice = replicateM_ i $ step lattice
 
-step :: STM.Map (V3 Int) Status -> STM ()
+step :: Dim n => STM.Map (V n Int) Status -> STM ()
 step lattice = do
     assocs <- ListT.toList $ STM.Map.listT lattice
     actions <- for (growByOne assocs) $ \(pt, status) -> do
@@ -73,14 +80,14 @@ step lattice = do
         Inactive -> when (numActive == 3) $ STM.Map.insert Active pt lattice
     delInactive lattice
 
-growByOne :: [(V3 Int, Status)] -> [(V3 Int, Status)]
+growByOne :: Dim n => [(V n Int, Status)] -> [(V n Int, Status)]
 growByOne assocs = do
     pt <- inflateByOne $ Map.keys asMap
     pure (pt, Map.findWithDefault Inactive pt asMap)
   where
     asMap = Map.fromList assocs
 
-inflateByOne :: [V3 Int] -> [V3 Int]
+inflateByOne :: Dim n => [V n Int] -> [V n Int]
 inflateByOne = concatMap withinOne .> nubOrd
 
 numSatisfy :: (v -> Bool) -> STM.Map k v -> STM Int
@@ -97,27 +104,28 @@ viewMap dict = do
     assocs <- ListT.toList $ STM.Map.listT dict
     pure $ Map.fromList assocs
 
-neighbours :: V3 Int -> STM.Map (V3 Int) Status -> STM [Status]
+neighbours :: Dim n => V n Int -> STM.Map (V n Int) Status -> STM [Status]
 neighbours orig lattice = for (neighbourPts orig) $ \pt ->
     fromMaybe Inactive <$> STM.Map.lookup pt lattice
 
-neighbourPts :: V3 Int -> [V3 Int]
+neighbourPts :: Dim n => V n Int -> [V n Int]
 neighbourPts pt = do
     nbr <- withinOne pt
     guard $ nbr /= pt
     pure nbr
 
-withinOne :: V3 Int -> [V3 Int]
+withinOne :: Dim n => V n Int -> [V n Int]
 withinOne pt = do
-    delta <- V3 <$> range <*> range <*> range
+    delta <- V <$> Vec.replicateM dimen range
     pure $ pt + delta
   where
+    dimen = dim pt
     range = [-1, 0, 1]
 
-injectAtZ :: Int -> Map (V2 Int) a -> Map (V3 Int) a
-injectAtZ z grid = Map.fromList $ do
-    (V2 x y, val) <- Map.toList grid
-    pure (V3 x y z, val)
+injectInit :: Dim n => Int -> Map (V n Int) a -> Map (V (n + 1) Int) a
+injectInit z grid = Map.fromList $ do
+    (V vec, val) <- Map.toList grid
+    pure (V $ Vec.snoc vec z, val)
 
 delInactive :: (Eq k, Hashable k) => STM.Map k Status -> STM ()
 delInactive dict = do
@@ -141,44 +149,47 @@ parseRow = do
     status <- zip [0..] <$> Parse.many parseTile
     pure $ Map.fromList status
 
-parseGrid :: Parser (Map (V2 Int) Status)
+parseGrid :: Parser (Map (V 2 Int) Status)
 parseGrid = do
     rows <- zip [0..] <$> Parse.sepEndBy parseRow Parse.Char.newline
     pure $ Map.fromList $ do
         (y, row) <- rows
         (x, status) <- Map.toList row
-        pure (V2 x y, status)
+        pure (V $ Vec.fromList [x, y], status)
 
 prettyStatus :: Status -> Char
 prettyStatus status = case status of
     Active -> '#'
     Inactive -> '.'
 
-prettyGrid :: (V2 Int, V2 Int) -> Map (V2 Int) Status -> Text
-prettyGrid (V2 minX minY, V2 maxX maxY) grid = Text.intercalate "\n" $ do
+prettyGrid :: (Int, Int) -> (Int, Int) -> Map (V 2 Int) Status -> Text
+prettyGrid (minX, minY) (maxX, maxY) grid = Text.intercalate "\n" $ do
     y <- [minY .. maxY]
     pure $ Text.pack $ do
         x <- [minX .. maxX]
-        let status = Map.findWithDefault Inactive (V2 x y) grid
+        let pt = V $ Vec.fromList [x, y]
+            status = Map.findWithDefault Inactive pt grid
         pure $ prettyStatus status
 
-prettyLattice :: Map (V3 Int) Status -> Text
+prettyLattice :: Map (V 3 Int) Status -> Text
 prettyLattice lattice
     | Map.null lattice = ""
     | otherwise = Text.intercalate "\n" $ do
         z <- [minZ .. maxZ]
-        let mkGrid (V3 x y z') = if z' == z then Just (V2 x y) else Nothing
+        let mkGrid (V vec) = if Vec.last vec == z
+                then Just (V $ Vec.init vec)
+                else Nothing
             grid = mapKeysMaybe mkGrid lattice
         pure $ Text.unlines
             [ Text.pack $ "z = " <> show z
-            , prettyGrid (V2 minX minY, V2 maxX maxY) grid
+            , prettyGrid (minX, minY) (maxX, maxY) grid
             ]
   where
-    pts = Map.keysSet lattice
+    pts = Set.map toVector $ Map.keysSet lattice
     minMax = minimum &&& maximum
-    (minX, maxX) = minMax $ Set.map (view _x) pts
-    (minY, maxY) = minMax $ Set.map (view _y) pts
-    (minZ, maxZ) = minMax $ Set.map (view _z) pts
+    (minX, maxX) = minMax $ Set.map (Vec.! 0) pts
+    (minY, maxY) = minMax $ Set.map (Vec.! 1) pts
+    (minZ, maxZ) = minMax $ Set.map (Vec.! 2) pts
 
 readFileUtf8 :: FilePath -> IO Text
 readFileUtf8 path = Text.Enc.decodeUtf8 <$> Bytes.readFile path
