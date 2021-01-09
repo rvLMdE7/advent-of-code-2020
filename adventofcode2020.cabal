@@ -12,33 +12,33 @@ source-repository head
 common common-lang-options
   default-language: Haskell2010
   default-extensions:
-      ImportQualifiedPost
+      BinaryLiterals
+    , ImportQualifiedPost
     , NumericUnderscores
-    , BinaryLiterals
 
 common common-lib-options
   import: common-lang-options
   build-depends:
       base ^>=4.14
+    , algebraic-graphs
     , bytestring
-    , flow
-    , parser-combinators
-    , text
-    , mtl
     , containers
-    , nonempty-containers
-    , stm-containers
+    , flow
     , hashable
-    , stm
     , lens
-    , vector
+    , linear
     , list-t
     , megaparsec
-    , th-printf
-    , linear
+    , mtl
+    , nonempty-containers
     , optics
+    , parser-combinators
     , pretty-simple
-    , algebraic-graphs
+    , stm
+    , stm-containers
+    , text
+    , th-printf
+    , vector
   ghc-options: -Wall
 
 common common-exe-options
