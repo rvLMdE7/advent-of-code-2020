@@ -27,7 +27,12 @@ common common-lib-options
     , mtl
     , containers
     , nonempty-containers
+    , stm-containers
+    , hashable
+    , stm
+    , lens
     , vector
+    , list-t
     , megaparsec
     , th-printf
     , linear
@@ -62,6 +67,7 @@ library
     , day-14
     , day-15
     , day-16
+    , day-17
     , day-18
     , day-19
     , day-22
@@ -83,6 +89,7 @@ library
     , Day14
     , Day15
     , Day16
+    , Day17
     , Day18
     , Day19
     , Day22
@@ -166,6 +173,11 @@ executable day-15
 executable day-16
   import: common-exe-options
   mixins: adventofcode2020 (Day16 as Day)
+  main-is: Main.hs
+
+executable day-17
+  import: common-exe-options
+  mixins: adventofcode2020 (Day17 as Day)
   main-is: Main.hs
 
 executable day-18
