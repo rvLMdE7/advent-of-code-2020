@@ -23,8 +23,8 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.IO qualified as Text.IO
 import Data.Text.Encoding qualified as Text.Enc
+import Data.Text.IO qualified as Text.IO
 import Data.Void (Void)
 import Flow ((.>))
 import Optics ((^?), (%~), (%), (&), isn't, mapped)
@@ -42,8 +42,6 @@ newtype Ingr = MkIngr
 newtype Allergen = MkAllergen
     { unAllergen :: Text
     } deriving (Eq, Ord, Read, Show)
-
-type FactDB = Map Allergen Fact
 
 data Fact
     = OneOf (Set Ingr)
