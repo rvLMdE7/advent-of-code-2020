@@ -15,6 +15,7 @@ import Control.Monad (void)
 import Control.Monad.State (State, evalState, gets, modify)
 import Data.Bifunctor (second)
 import Data.ByteString qualified as Bytes
+import Data.List qualified as List
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -22,6 +23,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.IO qualified as Text.IO
 import Data.Text.Encoding qualified as Text.Enc
 import Data.Void (Void)
 import Flow ((.>))
@@ -29,7 +31,6 @@ import Optics ((^?), (%~), (%), (&), isn't, mapped)
 import Optics qualified
 import Text.Megaparsec qualified as Parse
 import Text.Megaparsec.Char qualified as Parse.Char
-import Text.Pretty.Simple (pPrint)
 
 
 type Parser = Parse.Parsec Void Text
@@ -58,7 +59,8 @@ main = do
     case Parse.parse (parseInput <* Parse.eof) "day 21 input" file of
         Left err -> putStrLn $ Parse.errorBundlePretty err
         Right input -> do
-            pPrint $ part1 input
+            Text.IO.putStrLn $ tShow $ part1 input
+            Text.IO.putStrLn $ part2 input
 
 part1 :: [(Set Allergen, Set Ingr)] -> Int
 part1 assocs = sum $ do
@@ -68,6 +70,14 @@ part1 assocs = sum $ do
     ingrs = snd <$> assocs
     knowns = reduce $ compileInput assocs
     clears = Set.unions ingrs Set.\\ elemSet knowns
+
+part2 :: [(Set Allergen, Set Ingr)] -> Text
+part2 = compileInput
+    .> reduce
+    .> Map.toList
+    .> List.sortOn fst
+    .> fmap (snd .> unIngr)
+    .> Text.intercalate ","
 
 
 findFixeds :: Map Allergen Fact -> Map Allergen Ingr
@@ -154,3 +164,6 @@ singleton x = x :| []
 
 readFileUtf8 :: FilePath -> IO Text
 readFileUtf8 path = Text.Enc.decodeUtf8 <$> Bytes.readFile path
+
+tShow :: Show a => a -> Text
+tShow = show .> Text.pack
