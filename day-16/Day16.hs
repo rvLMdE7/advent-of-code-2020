@@ -37,13 +37,22 @@ main = do
     file <- readFileUtf8 "day-16/input.txt"
     case Par.parse (parseInput <* Par.eof) "day 16 input" file of
         Left err -> putStrLn $ Par.errorBundlePretty err
-        Right (rules, your, tickets) -> do
+        Right (rules, yours, tickets) -> do
             print $ part1 rules tickets
             let validTickets = filter (not <. invalidTicket rules) tickets
-            print $ determineFields rules validTickets
+            print $ part2 rules yours validTickets
 
 part1 :: Map Text Rule -> [Ticket] -> Int
 part1 = sumOfInvalidValsOnTickets
+
+part2 :: Map Text Rule -> Ticket -> [Ticket] -> Int
+part2 rules yours tickets =
+    decodeTicket (determineFields rules tickets) yours
+        & Map.filterWithKey (\field _ -> "departure" `Text.isPrefixOf` field)
+        & product
+
+decodeTicket :: Map Text Int -> Ticket -> Map Text Int
+decodeTicket fields ticket = fmap (ticket !!) fields
 
 determineFields :: Map Text Rule -> [Ticket] -> Map Text Int
 determineFields initRules initTickets =
