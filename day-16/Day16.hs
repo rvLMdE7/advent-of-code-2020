@@ -5,7 +5,7 @@ module Day16 where
 
 import Control.Applicative ((<|>), some, many)
 import Control.Monad (void, unless)
-import Control.Monad.State (State, gets, execState)
+import Control.Monad.State (State, execState)
 import Data.ByteString qualified as Byt
 import Data.List qualified as List
 import Data.Map (Map)
@@ -17,15 +17,14 @@ import Data.Text.Encoding qualified as Text.Enc
 import Data.Tuple (swap)
 import Data.Void (Void)
 import Flow ((<.), (.>))
-import Optics ((&), (%~), _1, _2)
+import Optics ((&), _1, _2, _3, view, use)
 import Optics.State.Operators ((%=))
-import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as Par
 import Text.Megaparsec.Char qualified as Par.Ch
 import Text.Megaparsec.Char.Lexer qualified as Par.Ch.Lex
 
 
-type Parser a = Parsec Void Text a
+type Parser a = Par.Parsec Void Text a
 
 type Ticket = [Int]
 
@@ -48,19 +47,18 @@ part1 = sumOfInvalidValsOnTickets
 
 determineFields :: Map Text Rule -> [Ticket] -> Map Text Int
 determineFields initRules initTickets =
-    (fmap Left initRules, ticketsToFields initTickets)
+    (initRules, ticketsToFields initTickets, Map.empty)
         & execState determine
-        & fst
-        & Map.mapMaybe rightToMaybe
+        & view _3
   where
-    determine :: State (Map Text (Either Rule Int), Map Int [Int]) ()
+    determine :: State (Map Text Rule, Map Int [Int], Map Text Int) ()
     determine = do
-        rules <- gets $ fst .> Map.mapMaybe leftToMaybe
+        rules <- use _1
         unless (Map.null rules) $ do
-            result <- gets $ snd .> fixedFields rules
-            let update = Map.fromList $ fmap (_2 %~ Right) result
-            _1 %= Map.union update
+            result <- fixedFields rules <$> use _2
+            _1 %= deleteKeys (fst <$> result)
             _2 %= deleteKeys (snd <$> result)
+            _3 %= Map.union (Map.fromList result)
             determine
 
 ticketsToFields :: [Ticket] -> Map Int [Int]
@@ -89,7 +87,7 @@ testRules :: Foldable t => t Rule -> Int -> Bool
 testRules rules x = any (`testRule` x) rules
 
 invalidTicket :: Foldable t => t Rule -> Ticket -> Bool
-invalidTicket rules = any (testRules rules .> not)
+invalidTicket rules = any $ testRules rules .> not
 
 invalidValsOnTicket :: Foldable t => t Rule -> Ticket -> [Int]
 invalidValsOnTicket rules = filter $ testRules rules .> not
