@@ -16,7 +16,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Enc
 import Data.Tuple (swap)
 import Data.Void (Void)
-import Flow ((<.), (.>))
+import Flow ((.>))
 import Optics ((&), _1, _2, _3, view, use)
 import Optics.State.Operators ((%=))
 import Text.Megaparsec qualified as Par
@@ -25,11 +25,8 @@ import Text.Megaparsec.Char.Lexer qualified as Par.Ch.Lex
 
 
 type Parser a = Par.Parsec Void Text a
-
 type Ticket = [Int]
-
 type Range = (Int, Int)
-
 type Rule = (Range, Range)
 
 main :: IO ()
@@ -39,11 +36,11 @@ main = do
         Left err -> putStrLn $ Par.errorBundlePretty err
         Right (rules, yours, tickets) -> do
             print $ part1 rules tickets
-            let validTickets = filter (not <. invalidTicket rules) tickets
+            let validTickets = filter (validTicket rules) tickets
             print $ part2 rules yours validTickets
 
 part1 :: Map Text Rule -> [Ticket] -> Int
-part1 = sumOfInvalidValsOnTickets
+part1 rules = invalidValsOnTickets rules .> sum
 
 part2 :: Map Text Rule -> Ticket -> [Ticket] -> Int
 part2 rules yours tickets =
@@ -65,8 +62,8 @@ determineFields initRules initTickets =
         rules <- use _1
         unless (Map.null rules) $ do
             result <- fixedFields rules <$> use _2
-            _1 %= deleteKeys (fst <$> result)
-            _2 %= deleteKeys (snd <$> result)
+            _1 %= deleteKeys (view _1 <$> result)
+            _2 %= deleteKeys (view _2 <$> result)
             _3 %= Map.union (Map.fromList result)
             determine
 
@@ -81,10 +78,10 @@ fixedFields rules fields = evalRules rules fields
     & fmap swap
 
 evalRules :: Map Text Rule -> Map Int [Int] -> Map Int [(Text, Bool)]
-evalRules rules = fmap eval
+evalRules rules fields = eval <$> fields
   where
-    eval vals = Map.toList $ fmap (test vals) rules
-    test vals rule = all (testRule rule) vals
+    eval field = Map.toList $ test field <$> rules
+    test field rule = all (testRule rule) field
 
 testRange :: Range -> Int -> Bool
 testRange (a, b) = between a b
@@ -95,17 +92,14 @@ testRule (a, b) x = testRange a x || testRange b x
 testRules :: Foldable t => t Rule -> Int -> Bool
 testRules rules x = any (`testRule` x) rules
 
-invalidTicket :: Foldable t => t Rule -> Ticket -> Bool
-invalidTicket rules = any $ testRules rules .> not
+validTicket :: Foldable t => t Rule -> Ticket -> Bool
+validTicket rules = all $ testRules rules
 
 invalidValsOnTicket :: Foldable t => t Rule -> Ticket -> [Int]
 invalidValsOnTicket rules = filter $ testRules rules .> not
 
 invalidValsOnTickets :: Foldable t => t Rule -> [Ticket] -> [Int]
 invalidValsOnTickets = invalidValsOnTicket .> concatMap
-
-sumOfInvalidValsOnTickets :: Foldable t => t Rule -> [Ticket] -> Int
-sumOfInvalidValsOnTickets rules = invalidValsOnTickets rules .> sum
 
 parseInput :: Parser (Map Text Rule, Ticket, [Ticket])
 parseInput = do
@@ -160,12 +154,6 @@ singleton = \case
 
 deleteKeys :: Ord k => [k] -> Map k v -> Map k v
 deleteKeys keys dict = foldr Map.delete dict keys
-
-leftToMaybe :: Either a b -> Maybe a
-leftToMaybe = either Just (const Nothing)
-
-rightToMaybe :: Either a b -> Maybe b
-rightToMaybe = either (const Nothing) Just
 
 readFileUtf8 :: FilePath -> IO Text
 readFileUtf8 path = Text.Enc.decodeUtf8 <$> Byt.readFile path
