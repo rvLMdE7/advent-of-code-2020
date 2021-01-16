@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Day24 where
 
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString qualified as Bytes
 import Data.Function ((&))
 import Data.Functor (($>))
@@ -31,12 +32,62 @@ main = do
         Left err -> putStrLn $ Parse.errorBundlePretty err
         Right paths -> do
             print $ part1 paths
+            print $ part2 paths
 
 part1 :: [[HexDir]] -> Int
-part1 = fmap canonPath .> count .> Map.filter odd .> length
+part1 = fmap (count .> canonPath) .> count .> Map.filter odd .> length
+
+part2 :: [[HexDir]] -> Int
+part2 = fmap (count .> canonPath)
+    .> count
+    .> Map.filter odd
+    .> Map.keysSet
+    .> days 100
+    .> length
 
 
-canonPath :: [HexDir] -> [HexDir]
+days :: Int -> Set (Map HexDir Int) -> Set (Map HexDir Int)
+days n blacks
+    | n == 0 = blacks
+    | otherwise = days (n - 1) (day blacks)
+
+day :: Set (Map HexDir Int) -> Set (Map HexDir Int)
+day blacks = blacks & Set.union toBlacks & (Set.\\ toWhites)
+  where
+    whites = allAdjacents blacks Set.\\ blacks
+    blackAdj = allAdjacent .> Set.filter (`Set.member` blacks) .> length
+    toWhites = Set.filter (blackAdj .> flip notElem [1, 2]) blacks
+    toBlacks = Set.filter (blackAdj .> (==) 2) whites
+
+
+allAdjacents :: Set (Map HexDir Int) -> Set (Map HexDir Int)
+allAdjacents = Set.toList .> fmap allAdjacent .> Set.unions
+
+allAdjacent :: Map HexDir Int -> Set (Map HexDir Int)
+allAdjacent path = Set.fromList $ do
+    dir <- [E, SE, SW, W, NW, NE]
+    pure $ canonPath $ Map.insertWith (+) dir 1 path
+
+adjacent :: Map HexDir Int -> Map HexDir Int -> Bool
+adjacent pathA pathB = sum (pathA `difference` pathB) == 1
+
+difference :: Map HexDir Int -> Map HexDir Int -> Map HexDir Int
+difference pathA pathB = canonPath $ Map.unionWith (+) pathA (invert pathB)
+
+invert :: Map HexDir Int -> Map HexDir Int
+invert = Map.toList .> fmap (first opposite) .> Map.fromList
+
+opposite :: HexDir -> HexDir
+opposite = \case
+    E -> W
+    SE -> NW
+    SW -> NE
+    W -> E
+    NW -> SE
+    NE -> SW
+
+
+canonPath :: Map HexDir Int -> Map HexDir Int
 canonPath = canon (loops <> shortcuts)
 
 loops :: Map (Set HexDir) (Set HexDir)
@@ -59,11 +110,8 @@ shortcuts = Map.fromList $
         ]
 
 
-canon :: Ord a => Map (Set a) (Set a) -> [a] -> [a]
-canon rules = count .> applyRules rules .> unCount
-
-applyRules :: Ord a => Map (Set a) (Set a) -> Map a Int -> Map a Int
-applyRules rules = apply
+canon :: Ord a => Map (Set a) (Set a) -> Map a Int -> Map a Int
+canon rules = apply .> Map.filter (/= 0)
   where
     apply dict = if any (`applicable` dict) (Map.keysSet rules)
         then apply $ Map.foldrWithKey (curry applyRule) dict rules
@@ -72,18 +120,15 @@ applyRules rules = apply
 applyRule :: Ord a => (Set a, Set a) -> Map a Int -> Map a Int
 applyRule (from, to) dict
     | occ /= 0 = dict
-        & Map.mapMaybeWithKey decr
+        & Map.mapWithKey decr
+        & Map.filter (/= 0)
         & Map.unionWith (+) incr
     | otherwise = dict
   where
     occ = if Set.null from
         then 0
         else minimum $ Set.map (\f -> Map.findWithDefault 0 f dict) from
-    decr key n = if key `Set.member` from
-        then if occ == n
-            then Nothing
-            else Just $ n - occ
-        else Just n
+    decr key n = if key `Set.member` from then n - occ else n
     incr = Map.fromSet (const occ) to
 
 applicable :: Ord a => Set a -> Map a Int -> Bool
